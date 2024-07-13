@@ -141,7 +141,13 @@ end
 
 function createVehicle(id, ...)
     assert(type(id) == "number", "Invalid model ID passed: " .. tostring(id))
+    local baseModel = getBaseModelIdFromCustomModelId(id)
+    if id == 407 then
+        id = 4070
+    end
+    local hand = getModelHandling(baseModel)
     local vehicle = createElementSafe("vehicle", id, ...)
+    setVehicleHandling(vehicle, "handlingFlags", hand["handlingFlags"])
     setElementResource(vehicle, sourceResource)
     return vehicle
 end

@@ -12,16 +12,19 @@ local function applyElementCustomModel(element)
     if not loadedModel then return end
 
     if _getElementModel(element) == loadedModel.id then return end
-
+    
+    
     local upgrades, handling, paintjob
     if getElementType(element) == "vehicle" then
         upgrades = getVehicleUpgrades(element)
         handling = getVehicleHandling(element)
         paintjob = getVehiclePaintjob(element)
+        
     end
 
     _setElementModel(element, loadedModel.id)
 
+    
     if upgrades then
         for _, v in pairs(upgrades) do
             addVehicleUpgrade(element, v)
@@ -56,7 +59,7 @@ local function loadCustomModel(customModel, elementToApply)
         outputDebugString("Failed to load custom model " .. customModel .. " due to model allocation failure", 1)
         return
     end
-
+    
     local colPath, txdPath, dffPath = customInfo.col, customInfo.txd, customInfo.dff
 
     local col, txd, dff
@@ -203,7 +206,7 @@ addEventHandler("onClientElementDataChange", root, function(key, prevCustomModel
         end
 
         -- Free the previous custom model if it's not used by any other element
-        freeAllocatedModelIfUnused(prevCustomModel)
+        --freeAllocatedModelIfUnused(prevCustomModel)
     end
 end)
 
@@ -261,3 +264,40 @@ end, false)
 addEventHandler("onClientResourceStop", resourceRoot, function()
     restoreElementBaseModels()
 end, false)
+
+
+addEventHandler("onClientVehicleEnter", getRootElement(),
+    function(thePlayer, seat)
+        if thePlayer == getLocalPlayer() and seat == 0 then
+            
+            local customModel = getElementData(source, getCustomModelDataKey(source))
+            if not customModel then return end
+            local loadedModel = loadedModels[customModel]
+            if not loadedModel then return end
+            if loadedModel.baseModel == 407 then
+                local dff = loadedModel.elements.dff
+                local txd = loadedModel.elements.txd
+                setElementModel(source, loadedModel.baseModel)
+                engineReplaceModel(dff, loadedModel.baseModel)
+                setElementData(source, "prevModel", customModel)
+            end
+            
+        end
+    end
+)
+addEventHandler("onClientVehicleExit", getRootElement(),
+    function(thePlayer, seat)
+        if thePlayer == getLocalPlayer() and seat == 0 then
+            local v = source
+            local prevModel = getElementData(source, "prevModel")
+            
+            if prevModel then
+                
+                
+                setElementModel(source, prevModel)
+                --setElementData(source, getCustomModelDataKey(source), loadedModel.id)
+                
+            end
+        end
+    end
+)
