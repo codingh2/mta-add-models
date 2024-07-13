@@ -29,34 +29,51 @@ local function loadModels()
                         local filesForCustomModel = {}
                         for _, fileInside in pairs(filesAndFoldersInside) do
                             local fullPathInside = fullPath .. "/" .. fileInside
+                            local customModel = false
                             if pathIsFile(fullPathInside) then
                                 local fileType = string.sub(fileInside, -3)
                                 if not (fileType == "dff" or fileType == "txd" or fileType == "col") then
                                     return false, "invalid " .. modelType .. " file type: " .. fileType
                                 end
-                                local customModel = tonumber(string.sub(fileInside, 1, -5))
-                                if not customModel then
-                                    return false, "invalid " .. modelType .. " custom model: " .. fileInside
-                                end
-                                if isDefaultID(modelType, customModel) then
-                                    return false, "custom " .. modelType .. " model is a default ID: " .. customModel
-                                end
-                                if customModels[customModel] then
-                                    return false, "duplicate " .. modelType .. " custom model: " .. customModel
-                                end
+                                customModel = tonumber(string.sub(fileInside, 1, -5))
                                 if not filesForCustomModel[customModel] then
                                     filesForCustomModel[customModel] = {}
                                 end
                                 filesForCustomModel[customModel][fileType] = fullPathInside
+                            else
+                                customModel = tonumber(fileInside)
+                                if not filesForCustomModel[customModel] then
+                                    filesForCustomModel[customModel] = {}
+                                end
+                                local data = getData(modelType)
+                                if not data then
+                                    return false, "no data found for " .. modelType
+                                end
+                                
+                                if data[baseModel].dff then filesForCustomModel[customModel]["dff"] = string.format("%s/%s.%s",fullPathInside,data[baseModel].dff,"dff") end
+                                if data[baseModel].txd then filesForCustomModel[customModel]["txd"] = string.format("%s/%s.%s",fullPathInside,data[baseModel].txd,"txd") end
+                                if data[baseModel].col then filesForCustomModel[customModel]["col"] = string.format("%s/%s.%s",fullPathInside,data[baseModel].col,"col") end
+                                
                             end
+                            if not customModel then
+                                return false, "invalid " .. modelType .. " custom model: " .. fileInside
+                            end
+                            if isDefaultID(modelType, customModel) then
+                                return false, "custom " .. modelType .. " model is a default ID: " .. customModel
+                            end
+                            if customModels[customModel] then
+                                return false, "duplicate " .. modelType .. " custom model: " .. customModel
+                            end
+                            
                         end
                         for customModel, files in pairs(filesForCustomModel) do
+                            
                             customModels[customModel] = {
                                 type = modelType,
                                 baseModel = baseModel,
-                                dff = files.dff,
-                                txd = files.txd,
-                                col = files.col
+                                dff = fileExists(files.dff) and files.dff or nil,
+                                txd = fileExists(files.txd) and files.txd or nil,
+                                col = files.col 
                             }
                         end
                     end
@@ -66,6 +83,7 @@ local function loadModels()
     end
     return true
 end
+
 
 local result, failReason = loadModels()
 if not result then
@@ -79,3 +97,5 @@ addEventHandler("onPlayerResourceStart", root, function(res)
         triggerClientEvent(source, "newmodels_reborn:receiveCustomModels", resourceRoot, customModels)
     end
 end)
+
+
