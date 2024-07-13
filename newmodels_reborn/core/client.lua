@@ -274,7 +274,7 @@ addEventHandler("onClientVehicleEnter", getRootElement(),
             if not customModel then return end
             local loadedModel = loadedModels[customModel]
             if not loadedModel then return end
-            if loadedModel.baseModel == 407 then
+            if isSpecial(loadedModel.baseModel) then
                 local dff = loadedModel.elements.dff
                 local txd = loadedModel.elements.txd
                 setElementModel(source, loadedModel.baseModel)

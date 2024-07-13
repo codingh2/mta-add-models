@@ -6,9 +6,11 @@
     <min_mta_version client="1.6.0-9.22505.0" server="1.6.0-9.22505.0"></min_mta_version>
 
     <!-- Main Scripts -->
+    <script src="core/data.lua" type="server" />
     <script src="core/shared.lua" type="shared"/>
     <script src="core/client.lua" type="client"/>
     <script src="core/server.lua" type="server"/>
+	  
     <!-- Exported functions -->
     <export function="isDefaultID" type="shared"/>
     <export function="createObject" type="shared"/>
@@ -19,7 +21,7 @@
     <export function="setPickupType" type="shared"/>
     <export function="setElementModel" type="shared"/>
     <export function="getElementModel" type="shared"/>
-
+	<export function="isSpecial" type="shared"/>
     <!-- Testing -->
     <script src="optional/c_testing.lua" type="client"/>
     <script src="optional/s_testing.lua" type="server"/>
