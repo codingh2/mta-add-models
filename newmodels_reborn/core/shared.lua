@@ -149,14 +149,20 @@ end
 function createVehicle(id, ...)
     assert(type(id) == "number", "Invalid model ID passed: " .. tostring(id))
     local baseModel = getBaseModelIdFromCustomModelId(id)
-    local def = getBaseModelIdFromCustomModelId(baseModel * 10)
     
-    if special[id] then
-        id = id * 10
-    end
-    local hand = getModelHandling(baseModel)
     local vehicle = createElementSafe("vehicle", id, ...)
-    setVehicleHandling(vehicle, "handlingFlags", hand["handlingFlags"])
+    if baseModel == 407 then
+        local ghost = _createVehicle(407,...)
+        local ghostPed = _createPed(0,getElementPosition(ghost))
+        setElementAlpha(ghostPed, 0)
+        warpPedIntoVehicle(ghostPed,ghost,0)
+        setElementAlpha(ghost, 0)
+        setElementCollisionsEnabled(ghost, false)
+        attachElements(ghost,vehicle,0,0,1)
+        --setElementParent(ghost,vehicle)
+        local gData = {ghost=ghost, ghostPed=ghostPed,waterCannon= (baseModel == 407)}
+        setElementData(vehicle,"gData",gData)
+    end
     setElementResource(vehicle, sourceResource)
     return vehicle
 end

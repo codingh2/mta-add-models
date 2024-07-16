@@ -96,6 +96,30 @@ addEventHandler("onPlayerResourceStart", root, function(res)
     if res == resource then
         triggerClientEvent(source, "newmodels_reborn:receiveCustomModels", resourceRoot, customModels)
     end
+    
+    bindKey(source,"vehicle_fire","both",function(player,key,state)
+        local theVeh = getPedOccupiedVehicle(player)
+        if theVeh then
+            local gData = getElementData(theVeh,"gData")
+            if (gData and getVehicleController(theVeh) == player) then
+                local x,y,z = getElementPosition(player)
+                local others = getElementsWithinRange(x,y,z,200,"player")
+                
+                for _,p in pairs(others) do
+                    triggerClientEvent(p,"pedVehicleFire",player,gData.ghostPed, state)
+                end
+                
+                
+            end
+        end
+    end)
 end)
+
+addEventHandler("onElementDestroy", getRootElement(), function ()
+    if getElementType(source) == "vehicle" then
+        local gData = getElementData(theVeh,"gData")
+        if gData then destroyElement(gData.ghost) destroyElement(gData.ghostPed) end
+    end
+  end)
 
 

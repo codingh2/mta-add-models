@@ -206,13 +206,14 @@ addEventHandler("onClientElementDataChange", root, function(key, prevCustomModel
         end
 
         -- Free the previous custom model if it's not used by any other element
-        --freeAllocatedModelIfUnused(prevCustomModel)
+        freeAllocatedModelIfUnused(prevCustomModel)
     end
 end)
 
 addEventHandler("onClientElementStreamIn", root, function()
     if not isValidElement(source) then return end
     setElementCustomModel(source)
+    
 end)
 
 addEventHandler("onClientElementStreamOut", root, function()
@@ -244,6 +245,103 @@ local function restoreElementBaseModels()
     end
 end
 
+
+local sX,sY = guiGetScreenSize()
+local centerX, centerY = sX/2, sY/2
+
+function control()
+    local theVeh = getPedOccupiedVehicle(localPlayer)
+    if not theVeh then return end
+    if not hasElementData(theVeh,"gData") then return end
+    if (theVeh and getVehicleController(theVeh) == localPlayer) then
+        local cx, cy, cz, wx, wy, wz, roll = getCameraMatrix()
+        local target = Vector3(getWorldFromScreenPosition(centerX,centerY,15))
+        local x,y,z = getVehicleComponentPosition(theVeh, "misc_a","world")
+        local pos = Vector3(x,y,z)
+        local dir = target - pos
+        dir:normalize()
+        local rot = getPedCameraRotation(localPlayer)
+        --local newRX,newRY,newRZ = math.deg(dir.z) + 170, math.deg(dir.y), math.deg(dir.z)
+        local newr = -rot + 180
+        setVehicleComponentRotation(theVeh, "misc_a", math.deg(-dir.z) + 150 ,0, newr, "world")
+    end
+end
+
+local gTimer = false
+
+function gFunc()
+    local lx,ly,lz = getElementPosition(localPlayer)
+
+    local vehs = getElementsWithinRange(lx,ly,lz,200,"vehicle")
+    for _, theVeh in pairs(vehs) do
+        local gData = getElementData(theVeh,"gData")
+        if gData and getVehicleController(theVeh) ~= false then
+            if gData.waterCannon then
+                local ghost = gData.ghost
+                local ghostPed = gData.ghostPed
+                if ghost then 
+                    
+                    local x,y,z = getVehicleComponentPosition(theVeh, "misc_a","world")
+                    setVehicleComponentPosition(ghost, "misc_a",x,y,z,"world")
+                    local rx,ry,rz = getVehicleComponentRotation(theVeh,"misc_a","parent")
+                    local gx,gy,gz = getVehicleComponentRotation(ghost,"misc_a","parent")
+                    --setVehicleComponentRotation(ghost,"misc_a",rx,ry,rz,"parent")
+                    
+                    if not gx or not rx then
+                        setPedControlState(ghostPed, "special_control_left", false)
+                        setPedControlState(ghostPed, "special_control_right", false)    
+                        setPedControlState(ghostPed, "special_control_up", false)
+                        setPedControlState(ghostPed, "special_control_down", false)
+                        break 
+                    end
+                    local difz = rz - gz
+                    if difz < -180 then difz = difz + 360 end
+                    if difz > 180 then difz = difz - 360 end
+                    if difz == 0 then 
+                        setPedControlState(ghostPed, "special_control_left", false)
+                        setPedControlState(ghostPed, "special_control_right", false) 
+                        return end
+                    if difz > 0 then 
+                    setPedControlState(ghostPed, "special_control_right", false) 
+                    setPedAnalogControlState(ghostPed, "special_control_left",1)
+                    
+                    elseif difz < 0 then 
+                        setPedControlState(ghostPed, "special_control_left", false)
+                        setPedAnalogControlState(ghostPed, "special_control_right",1)
+                    else
+                        setPedControlState(ghostPed, "special_control_left", false)
+                        setPedControlState(ghostPed, "special_control_right", false)
+                    end
+                    --if gx < 180 then gx = gx + 180 end
+                    --if gx > 180 then gx = gx - 180 end
+                    local difx = rx - gx
+                    
+                    if difx < 180 then difx = difx + 360 end
+                    if difx > 180 then difx = difx - 360 end
+                    --difx = difx - 180
+                    --outputChatBox(string.format("d %.1f r %.1f g %.1f",difx,rx,gx))
+                    if difx == 0 then 
+                        setPedControlState(ghostPed, "special_control_up", false)
+                        setPedControlState(ghostPed, "special_control_down", false) 
+                        return end
+                    if difx < 0 then 
+                    setPedControlState(ghostPed, "special_control_down", false) 
+                    setPedControlState(ghostPed, "special_control_up",true)
+                    
+                    elseif difx > 0 then 
+                        setPedControlState(ghostPed, "special_control_up", false)
+                        setPedControlState(ghostPed, "special_control_down",true)
+                    else
+                        setPedControlState(ghostPed, "special_control_up", false)
+                        setPedControlState(ghostPed, "special_control_down", false)
+                    end
+                end
+            end
+        end
+    end
+    
+end
+
 addEventHandler("newmodels_reborn:receiveCustomModels", resourceRoot, function(customModelsFromServer)
     restoreElementBaseModels()
 
@@ -259,45 +357,58 @@ addEventHandler("newmodels_reborn:receiveCustomModels", resourceRoot, function(c
             setElementCustomModel(element)
         end
     end
+    if isTimer(gTimer) then killTimer(gTimer) end
+    gTimer = setTimer(gFunc,200,0)
 end, false)
 
 addEventHandler("onClientResourceStop", resourceRoot, function()
     restoreElementBaseModels()
+    if isTimer(gTimer) then killTimer(gTimer) end
+    removeEventHandler("onClientRender", root, control)
 end, false)
 
 
 addEventHandler("onClientVehicleEnter", getRootElement(),
     function(thePlayer, seat)
-        if thePlayer == getLocalPlayer() and seat == 0 then
-            
-            local customModel = getElementData(source, getCustomModelDataKey(source))
-            if not customModel then return end
-            local loadedModel = loadedModels[customModel]
-            if not loadedModel then return end
-            if isSpecial(loadedModel.baseModel) then
-                local dff = loadedModel.elements.dff
-                local txd = loadedModel.elements.txd
-                setElementModel(source, loadedModel.baseModel)
-                engineReplaceModel(dff, loadedModel.baseModel)
-                setElementData(source, "prevModel", customModel)
-            end
-            
+        if seat == 0 then
+            addEventHandler("onClientRender", root, control)
         end
     end
 )
+
 addEventHandler("onClientVehicleExit", getRootElement(),
     function(thePlayer, seat)
-        if thePlayer == getLocalPlayer() and seat == 0 then
-            local v = source
-            local prevModel = getElementData(source, "prevModel")
-            
-            if prevModel then
-                
-                
-                setElementModel(source, prevModel)
-                --setElementData(source, getCustomModelDataKey(source), loadedModel.id)
-                
-            end
+        if seat == 0 then
+            removeEventHandler("onClientRender", root, control)
         end
     end
 )
+
+local showComponents = false
+bindKey("F5", "down", function() showComponents = not showComponents end)
+
+addEventHandler("onClientRender", root, function()
+    if not showComponents then return end
+
+    for _, veh in pairs(getElementsByType("vehicle", root, true)) do
+        for compname in pairs(getVehicleComponents(veh)) do
+            local x, y = getScreenFromWorldPosition(getVehicleComponentPosition(veh, compname, "world"))
+
+            if x then
+                dxDrawText(compname, x, y, 0, 0)
+            end
+        end 
+    end
+end)
+
+
+
+addEvent("pedVehicleFire",true)
+addEventHandler("pedVehicleFire",localPlayer,function(ped,state)
+    if isElement(ped) then
+        if isElementStreamedIn(ped) then
+            setPedControlState(ped,"vehicle_fire", state=="down")
+        end
+    end
+    
+end)
